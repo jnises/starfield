@@ -4,10 +4,10 @@
 if(!window.requestAnimationFrame)
 {
     window.requestAnimationFrame = (function(){
-        return  window.webkitRequestAnimationFrame || 
-            window.mozRequestAnimationFrame    || 
-            window.oRequestAnimationFrame      || 
-            window.msRequestAnimationFrame     || 
+        return  window.webkitRequestAnimationFrame ||
+            window.mozRequestAnimationFrame    ||
+            window.oRequestAnimationFrame      ||
+            window.msRequestAnimationFrame     ||
             function(/* function */ callback, /* DOMElement */ element){
                 window.setTimeout(callback, 1000 / 60);
             };
@@ -29,7 +29,7 @@ function Starfield(container, numStars)
     var particleSpeed = 0.1;
 
     var stars = [];
-	
+
     var camera = new THREE.Camera(120, container.clientWidth / container.clientHeight, zspan[1], zspan[0]);
     camera.position.z = zspan[0];
     var renderer = new THREE.CanvasRenderer();
@@ -71,10 +71,10 @@ function Starfield(container, numStars)
                  program: function(context)
                  {
                      // change to some radial gradient
-					 context.beginPath();
-					 context.arc( 0, 0, 1, 0, 7, true );
-					 context.closePath();
-					 context.fill();                     
+                     context.beginPath();
+                     context.arc( 0, 0, 1, 0, 7, true );
+                     context.closePath();
+                     context.fill();
                  }}));
             particle.scale.x = particle.scale.y = Math.random() * particleVariance + particleRadius;
             particle.position.x = Math.random() * (xspan[1] - xspan[0]) + xspan[0];
