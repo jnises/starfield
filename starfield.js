@@ -18,7 +18,7 @@ function Starfield(container, numStars)
 {
     var self = this;
     var lastTime = new Date().getTime();
-    numStars = numStars !== undefined ? numStars : 1024;
+    numStars = numStars !== undefined ? numStars : 2048;
 
     var zspan = [2048, 1];
     var xspan = [-1024, 1024];
@@ -38,6 +38,7 @@ function Starfield(container, numStars)
     {
         renderer.setSize(container.clientWidth, container.clientHeight);
         camera.aspect = container.clientWidth / container.clientHeight;
+        camera.updateProjectionMatrix();
     };
     container.appendChild(renderer.domElement);
 
