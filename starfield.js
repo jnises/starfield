@@ -48,13 +48,12 @@ function Starfield(container, numStars)
     var lastTime = new Date().getTime();
     numStars = numStars !== undefined ? numStars : 2048;
 
-    var zspan = [2048, 1];
-    var xspan = [-1024, 1024];
-    var yspan = [-1024, 1024];
+    var xscale = 1024;
+    var yscale = 1024;
 
     var particleRadius = 0.5;
     var particleVariance = 0.5;
-    var particleSpeed = 0.1;
+    var particleSpeed = 0.01;
 
     var arrayBuffer = null;
     var arrayView = null;
@@ -64,7 +63,7 @@ function Starfield(container, numStars)
 
     var shader = null;
     var projectionMatrixUniform = null;
-    var vertexAttribUniform = null;
+    var vertexAttrib = null;
 
     var permTable = function()
     {
@@ -132,11 +131,6 @@ function Starfield(container, numStars)
         {
             canvas.width = container.clientWidth;
             canvas.height = container.clientHeight;
-
-            if(gl) 
-            {
-                gl.viewport(0, 0, canvas.width, canvas.height);
-            }
         }
     }
 
@@ -160,7 +154,7 @@ uniform mat4 projection_matrix;\n\
 attribute vec4 vertexAttrib;\n\
 void main(void)\n\
 {\n\
-gl_Position = vec4(0.0, 0.0, -10.0, 1.0);\n\
+gl_Position = projection_matrix * vertexAttrib;\n\
 gl_PointSize = 10.0;\n\
 }\
 ';
@@ -188,9 +182,9 @@ gl_PointSize = 10.0;\n\
 
         gl.useProgram(shader);
         projectionMatrixUniform = gl.getUniformLocation(shader, "projection_matrix");
+        vertexAttrib = gl.getAttribLocation(shader, "vertexAttrib");
+        gl.enableVertexAttribArray(vertexAttrib);
 
-        vertexAttribUniform = gl.getAttribLocation(shader, "vertexAttrib");
-        gl.enableVertexAttribArray(vertexAttribUniform);
         arrayBuffer = gl.createBuffer();
     }
 
@@ -202,15 +196,14 @@ gl_PointSize = 10.0;\n\
             arrayView = new Float32Array(rawBuffer);
         }
 
-        // TODO update the star view
         for(var i = 0; i < numStars; ++i)
         {
             var pos = permRand2D(i + time);
             
             var base = i * 4;
-            arrayView[base] = pos[0]; // x
-            arrayView[base + 1] = pos[1]; // y
-            arrayView[base + 2] = -i; // z
+            arrayView[base] = pos[0] * xscale; // x
+            arrayView[base + 1] = pos[1] * yscale; // y
+            arrayView[base + 2] = -i + (time % 1); // z
             arrayView[base + 3] = 1;
         }
         
@@ -238,13 +231,15 @@ gl_PointSize = 10.0;\n\
             var delta = now - lastTime;
             lastTime = now;
 
+            gl.viewport(0, 0, canvas.width, canvas.height);
+
             gl.depthRange(0, 1);
             gl.clearColor(0.0, 0.0, 0.0, 1.0);
             gl.clear(gl.COLOR_BUFFER_BIT);
 
             gl.useProgram(shader);
             gl.enable(gl.BLEND);
-            gl.blendFunc(gl.SRC_COLOR, gl.ONE);
+            gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
 
             // TODO use a better matrix
             gl.uniformMatrix4fv(projectionMatrixUniform, false, new Float32Array([1,0,0,0, 0,1,0,0, 0,0,0,-1, 0,0,2,0]));
@@ -252,7 +247,7 @@ gl_PointSize = 10.0;\n\
             updateStarView(now * particleSpeed);
 
             gl.bindBuffer(gl.ARRAY_BUFFER, arrayBuffer);
-            gl.vertexAttribPointer(vertexAttribUniform, 4, gl.FLOAT, false, 0, 0);
+            gl.vertexAttribPointer(vertexAttrib, 4, gl.FLOAT, false, 0, 0);
             gl.drawArrays(gl.POINTS, 0, numStars);
         }
         catch(ex)
