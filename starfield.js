@@ -46,15 +46,15 @@ function Starfield(container, numStars)
 
     var self = this;
     var lastTime = new Date().getTime();
-    numStars = numStars !== undefined ? numStars : 2048;
+    numStars = numStars !== undefined ? numStars : 4096;
 
-    var xscale = 1024;
-    var yscale = 1024;
+    var xscale = 2048;
+    var yscale = 2048;
     var zscale = 0.5;
 
     var particleRadius = 0.5;
     var particleVariance = 0.5;
-    var particleSpeed = 0.1;
+    var particleSpeed = 0.01;
 
     var arrayBuffer = null;
     var arrayView = null;
@@ -161,9 +161,9 @@ void main(void)\n\
 {\n\
 vec2 centerCoord = gl_PointCoord - vec2(0.5);\n\
 float radius2 = dot(centerCoord, centerCoord) * 4.0;\n\
-float falloff = min(1.0, (1.0 - mix(pow(radius2, 0.125), radius2, clamp(2.0 - pointSize, 0.0, 1.0))) * 2.0);\n\
-float gray = falloff * alpha;\n\
-gl_FragColor = vec4(gray);\n\
+float falloff = min(1.0, (1.0 - pow(radius2, 0.125)) * 2.0);\n\
+float gray = falloff;\n\
+gl_FragColor = mix(vec4(0.5 * (1.0 - smoothstep(0.0, 1.0, radius2))), vec4(gray), clamp(pointSize - 4.0, 0.0, 1.0)) * alpha;\n\
 }\n\
 ';
 
@@ -181,7 +181,7 @@ void main(void)\n\
 gl_Position = projection_matrix * vertexAttrib;\n\
 gl_PointSize = 1.0 / max(abs(gl_Position[3]), 0.001) * sprite_scale;\n\
 pointSize = gl_PointSize;\n\
-alpha = clamp((gl_PointSize - 0.001) * 0.3, 0.0, 1.0);\n\
+alpha = clamp(gl_PointSize * 0.9, 0.0, 1.0);\n\
 }\
 ';
         console.info("vertex shader:\n" + vertexSrc);
@@ -287,8 +287,8 @@ alpha = clamp((gl_PointSize - 0.001) * 0.3, 0.0, 1.0);\n\
             console.error(ex);
 
             // die. we will not try again
-            //return;
-            throw ex;
+            return;
+            //throw ex;
         }
 
         requestAnimationFrame(function(){self.render();});
