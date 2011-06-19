@@ -66,8 +66,7 @@ function Starfield(container, numStars)
     var projectionMatrixUniform = null;
     var vertexAttribUniform = null;
 
-    // TODO this won't work, webgl glsl doesn't support integers it seems
-    var permString = function()
+    var permTable = function()
     {
         var numbers = [];
         for(var i = 0; i < 256; ++i)
@@ -81,13 +80,24 @@ function Starfield(container, numStars)
             perm.push(numbers.splice(Math.floor(Math.random() * numbers.length), 1)[0]);
         }
 
-        return "const int perm[256] = int[](" + perm.join(",") + ");";
+        return perm;
     }();
 
 
     ///////////////////////////////
     // private methods
     ///////////////////////////////
+
+    /**
+     * \return an array of two values between -1 and 1.
+     */
+    function permRand2D(value)
+    {
+        var intval = Math.floor(value);
+        var x = (permTable[intval % 256] / 255) - 0.5;
+        var y = (permTable[(intval + 213) % 256] / 255) - 0.5;
+        return [x, y];
+    }
 
     function createCanvas()
     {
@@ -145,7 +155,7 @@ gl_FragColor = vec4(1,1,1,1);\n\
 }\n\
 ';
 
-        var vertexSrc = permString + '\n\
+        var vertexSrc = '\
 uniform mat4 projection_matrix;\n\
 attribute vec4 vertexAttrib;\n\
 void main(void)\n\
@@ -177,7 +187,7 @@ gl_PointSize = 10.0;\n\
             throw "Shader link error: " + gl.getProgramInfoLog(shader);
 
         gl.useProgram(shader);
-        projectionMatrixUniform = gl.getAttribLocation(shader, "projection_matrix");
+        projectionMatrixUniform = gl.getUniformLocation(shader, "projection_matrix");
 
         vertexAttribUniform = gl.getAttribLocation(shader, "vertexAttrib");
         gl.enableVertexAttribArray(vertexAttribUniform);
@@ -195,7 +205,13 @@ gl_PointSize = 10.0;\n\
         // TODO update the star view
         for(var i = 0; i < numStars; ++i)
         {
-
+            var pos = permRand2D(i + time);
+            
+            var base = i * 4;
+            arrayView[base] = pos[0]; // x
+            arrayView[base + 1] = pos[1]; // y
+            arrayView[base + 2] = -i; // z
+            arrayView[base + 3] = 1;
         }
         
         gl.bindBuffer(gl.ARRAY_BUFFER, arrayBuffer);
@@ -211,6 +227,8 @@ gl_PointSize = 10.0;\n\
     {
         try
         {
+            // CreateCanvas should already have created gl. If it
+            // doesn't exist webgl isn't supported.
             if(!gl) return;
 
             initResources();
@@ -229,9 +247,9 @@ gl_PointSize = 10.0;\n\
             gl.blendFunc(gl.SRC_COLOR, gl.ONE);
 
             // TODO use a better matrix
-            gl.uniformMatrix4fv(projectionMatrixUniform, false, [1,0,0,0, 0,1,0,0, 0,0,0,-1, 0,0,2,0]);
+            gl.uniformMatrix4fv(projectionMatrixUniform, false, new Float32Array([1,0,0,0, 0,1,0,0, 0,0,0,-1, 0,0,2,0]));
             
-            updateStarView(now);
+            updateStarView(now * particleSpeed);
 
             gl.bindBuffer(gl.ARRAY_BUFFER, arrayBuffer);
             gl.vertexAttribPointer(vertexAttribUniform, 4, gl.FLOAT, false, 0, 0);
