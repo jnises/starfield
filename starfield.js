@@ -50,10 +50,11 @@ function Starfield(container, numStars)
 
     var xscale = 1024;
     var yscale = 1024;
+    var zscale = 0.5;
 
     var particleRadius = 0.5;
     var particleVariance = 0.5;
-    var particleSpeed = 0.01;
+    var particleSpeed = 0.1;
 
     var arrayBuffer = null;
     var arrayView = null;
@@ -64,6 +65,7 @@ function Starfield(container, numStars)
     var shader = null;
     var projectionMatrixUniform = null;
     var vertexAttrib = null;
+    var spriteScaleUniform = null;
 
     var permTable = function()
     {
@@ -93,8 +95,17 @@ function Starfield(container, numStars)
     function permRand2D(value)
     {
         var intval = Math.floor(value);
-        var x = (permTable[intval % 256] / 255) - 0.5;
-        var y = (permTable[(intval + 213) % 256] / 255) - 0.5;
+
+        var byte0 = 0;
+        var byte1 = 0;
+        for(var i = 7; i >= 0; --i)
+        {
+            byte0 += ((intval >> (i * 2 + 1)) & 1) * Math.pow(2, i);
+            byte1 += ((intval >> (i * 2)) & 1) * Math.pow(2, i);
+        }
+
+        var x = (permTable[byte0] + (permTable[byte1] >> 1)) / 383 - 0.5;
+        var y = (permTable[(byte0 + 123) % 256] + (permTable[(byte1 + 123) % 256] >> 1)) / 383 - 0.5;
         return [x, y];
     }
 
@@ -109,7 +120,7 @@ function Starfield(container, numStars)
             {
                 try
                 {
-                    gl = canvas.getContext(contextNames[i]);
+                    gl = canvas.getContext(contextNames[i], {antialias: true});
                 }
                 catch(e)
                 { }
@@ -143,19 +154,34 @@ function Starfield(container, numStars)
         var vertexShader = gl.createShader(gl.VERTEX_SHADER);
 
         var fragmentSrc = '\
+precision mediump float;\n\
+varying float alpha;\n\
+varying float pointSize;\n\
 void main(void)\n\
 {\n\
-gl_FragColor = vec4(1,1,1,1);\n\
+vec2 centerCoord = gl_PointCoord - vec2(0.5);\n\
+float radius2 = dot(centerCoord, centerCoord) * 4.0;\n\
+float falloff = min(1.0, (1.0 - mix(pow(radius2, 0.125), radius2, clamp(2.0 - pointSize, 0.0, 1.0))) * 2.0);\n\
+float gray = falloff * alpha;\n\
+gl_FragColor = vec4(gray);\n\
 }\n\
 ';
 
         var vertexSrc = '\
+precision mediump float;\n\
+uniform float sprite_scale;\n\
 uniform mat4 projection_matrix;\n\
 attribute vec4 vertexAttrib;\n\
+varying float pointSize;\n\
+\n\
+varying float alpha;\n\
+\n\
 void main(void)\n\
 {\n\
 gl_Position = projection_matrix * vertexAttrib;\n\
-gl_PointSize = 10.0;\n\
+gl_PointSize = 1.0 / max(abs(gl_Position[3]), 0.001) * sprite_scale;\n\
+pointSize = gl_PointSize;\n\
+alpha = clamp((gl_PointSize - 0.001) * 0.3, 0.0, 1.0);\n\
 }\
 ';
         console.info("vertex shader:\n" + vertexSrc);
@@ -181,6 +207,7 @@ gl_PointSize = 10.0;\n\
             throw "Shader link error: " + gl.getProgramInfoLog(shader);
 
         gl.useProgram(shader);
+        spriteScaleUniform = gl.getUniformLocation(shader, "sprite_scale");
         projectionMatrixUniform = gl.getUniformLocation(shader, "projection_matrix");
         vertexAttrib = gl.getAttribLocation(shader, "vertexAttrib");
         gl.enableVertexAttribArray(vertexAttrib);
@@ -203,7 +230,7 @@ gl_PointSize = 10.0;\n\
             var base = i * 4;
             arrayView[base] = pos[0] * xscale; // x
             arrayView[base + 1] = pos[1] * yscale; // y
-            arrayView[base + 2] = -i + (time % 1); // z
+            arrayView[base + 2] = (-i + (time % 1)) * zscale; // z
             arrayView[base + 3] = 1;
         }
         
@@ -232,6 +259,11 @@ gl_PointSize = 10.0;\n\
             lastTime = now;
 
             gl.viewport(0, 0, canvas.width, canvas.height);
+            var aspect;
+            if(canvas.height == 0)
+                aspect = 1;
+            else
+                aspect = canvas.width / canvas.height;
 
             gl.depthRange(0, 1);
             gl.clearColor(0.0, 0.0, 0.0, 1.0);
@@ -239,10 +271,10 @@ gl_PointSize = 10.0;\n\
 
             gl.useProgram(shader);
             gl.enable(gl.BLEND);
-            gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+            gl.blendFunc(gl.SRC_COLOR, gl.ONE);
 
-            // TODO use a better matrix
-            gl.uniformMatrix4fv(projectionMatrixUniform, false, new Float32Array([1,0,0,0, 0,1,0,0, 0,0,0,-1, 0,0,2,0]));
+            gl.uniformMatrix4fv(projectionMatrixUniform, false, new Float32Array([1,0,0,0, 0,aspect,0,0, 0,0,0,-1, 0,0,2,0]));
+            gl.uniform1f(spriteScaleUniform, canvas.width);
             
             updateStarView(now * particleSpeed);
 
@@ -255,7 +287,8 @@ gl_PointSize = 10.0;\n\
             console.error(ex);
 
             // die. we will not try again
-            return;
+            //return;
+            throw ex;
         }
 
         requestAnimationFrame(function(){self.render();});
