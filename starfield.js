@@ -44,33 +44,17 @@ function Starfield(container, numStars)
     ///////////////////
 
     var self = this;
-    var lastTime = new Date().getTime();
-    numStars = numStars !== undefined ? numStars : 30000;//8192;
+    this.numStars = numStars !== undefined ? numStars : 30000;//8192;
 
     /** @const */
     var xscale = 2048;
     /** @const */
     var yscale = 2048;
     /** @const */
-    var zscale = 4096 / numStars;
-
-    var particleRadius = 2.0;
-    var particleVariance = 0.5;
-    var particleSpeed = 1.0;
-
-    var arrayBuffer = null;
-    var arrayView = null;
-
-    var canvas = null;
-    var gl = null;
-
-    var shader = null;
-    var projectionMatrixUniform = null;
-    var vertexAttrib = null;
-    var spriteScaleUniform = null;
+    var zscale = 4096 / this.numStars;
 
     /** @const */
-    var permTableSize = numStars;
+    var permTableSize = this.numStars;
     var permTable = function()
     {
         var numbers = [];
@@ -88,15 +72,30 @@ function Starfield(container, numStars)
         return perm;
     }();
 
+    //////////////////////////////
+    // public data
+    //////////////////////////////
+    this.gl = null;
+    this.lastTime = new Date().getTime();
+    this.canvas = null;
+    this.shader = null;
+    this.projectionMatrixUniform = null;
+    this.spriteScaleUniform = null;
+    this.particleRadius = 2.0;
+    this.particleSpeed = 1.0;
+    this.arrayBuffer = null;
+    this.arrayView = null;
+    this.vertexAttrib = null;
+
 
     ///////////////////////////////
-    // private methods
+    // priviliged methods
     ///////////////////////////////
 
     /**
      * \return an array of two values between -1 and 1.
      */
-    function permRand2D(value)
+    this.permRand2D = function(value)
     {
         var intval = Math.floor(value);
 
@@ -105,49 +104,49 @@ function Starfield(container, numStars)
         return [x, y];
     }
 
-    function createCanvas()
+    this.createCanvas = function()
     {
-        canvas = document.createElement("canvas");
+        this.canvas = document.createElement("canvas");
         // TODO handle browsers without canvas support
-        if(canvas)
+        if(this.canvas)
         {
             var contextNames = ["webgl", "experimental-webgl", "moz-webgl", "webkit-3d"];
             for(var i = 0; i < contextNames.length; ++i)
             {
                 try
                 {
-                    gl = canvas.getContext(contextNames[i], {antialias: true});
+                    this.gl = this.canvas.getContext(contextNames[i], {antialias: true});
                 }
                 catch(e)
                 { }
 
-                if(gl) break;
+                if(this.gl) break;
             }
 
-            if(gl)
+            if(this.gl)
             {
-                container.appendChild(canvas);
-                resizeCanvas();
+                container.appendChild(this.canvas);
+                this.resizeCanvas();
             }
         }
     }
 
-    function resizeCanvas()
+    this.resizeCanvas = function()
     {
-        if(canvas)
+        if(this.canvas)
         {
-            canvas.width = container.clientWidth;
-            canvas.height = container.clientHeight;
+            this.canvas.width = container.clientWidth;
+            this.canvas.height = container.clientHeight;
         }
     }
 
-    function initResources()
+    this.initResources = function()
     {
-        if(shader && arrayBuffer)
+        if(this.shader && this.arrayBuffer)
             return;
         
-        var fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-        var vertexShader = gl.createShader(gl.VERTEX_SHADER);
+        var fragmentShader = this.gl.createShader(this.gl.FRAGMENT_SHADER);
+        var vertexShader = this.gl.createShader(this.gl.VERTEX_SHADER);
 
         var fragmentSrc = '\
 precision mediump float;\n\
@@ -177,124 +176,119 @@ gl_PointSize = pointSize;\n\
 ';
         console.info("vertex shader:\n" + vertexSrc);
 
-        gl.shaderSource(fragmentShader, fragmentSrc);
-        gl.compileShader(fragmentShader);
+        this.gl.shaderSource(fragmentShader, fragmentSrc);
+        this.gl.compileShader(fragmentShader);
 
-        if(!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS))
-            throw "Fragment shader compilation error: " + gl.getShaderInfoLog(fragmentShader);
+        if(!this.gl.getShaderParameter(fragmentShader, this.gl.COMPILE_STATUS))
+            throw "Fragment shader compilation error: " + this.gl.getShaderInfoLog(fragmentShader);
 
-        gl.shaderSource(vertexShader, vertexSrc);
-        gl.compileShader(vertexShader);
+        this.gl.shaderSource(vertexShader, vertexSrc);
+        this.gl.compileShader(vertexShader);
 
-        if(!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS))
-            throw "Vertex shader compilation error: " + gl.getShaderInfoLog(vertexShader);
+        if(!this.gl.getShaderParameter(vertexShader, this.gl.COMPILE_STATUS))
+            throw "Vertex shader compilation error: " + this.gl.getShaderInfoLog(vertexShader);
 
-        shader = gl.createProgram();
-        gl.attachShader(shader, vertexShader);
-        gl.attachShader(shader, fragmentShader);
-        gl.linkProgram(shader);
+        this.shader = this.gl.createProgram();
+        this.gl.attachShader(this.shader, vertexShader);
+        this.gl.attachShader(this.shader, fragmentShader);
+        this.gl.linkProgram(this.shader);
 
-        if(!gl.getProgramParameter(shader, gl.LINK_STATUS))
-            throw "Shader link error: " + gl.getProgramInfoLog(shader);
+        if(!this.gl.getProgramParameter(this.shader, this.gl.LINK_STATUS))
+            throw "Shader link error: " + this.gl.getProgramInfoLog(this.shader);
 
-        gl.useProgram(shader);
-        spriteScaleUniform = gl.getUniformLocation(shader, "sprite_scale");
-        projectionMatrixUniform = gl.getUniformLocation(shader, "projection_matrix");
-        vertexAttrib = gl.getAttribLocation(shader, "vertexAttrib");
-        gl.enableVertexAttribArray(vertexAttrib);
+        this.gl.useProgram(this.shader);
+        this.spriteScaleUniform = this.gl.getUniformLocation(this.shader, "sprite_scale");
+        this.projectionMatrixUniform = this.gl.getUniformLocation(this.shader, "projection_matrix");
+        this.vertexAttrib = this.gl.getAttribLocation(this.shader, "vertexAttrib");
+        this.gl.enableVertexAttribArray(this.vertexAttrib);
 
-        arrayBuffer = gl.createBuffer();
+        this.arrayBuffer = this.gl.createBuffer();
     }
 
-    function updateStarView(time)
+    this.updateStarView = function(time)
     {
-        if(!arrayView)
+        if(!this.arrayView)
         {
-            var rawBuffer = new ArrayBuffer(numStars * 4 * Float32Array.BYTES_PER_ELEMENT);
-            arrayView = new Float32Array(rawBuffer);
+            var rawBuffer = new ArrayBuffer(this.numStars * 4 * Float32Array.BYTES_PER_ELEMENT);
+            this.arrayView = new Float32Array(rawBuffer);
         }
 
-        for(var i = 0; i < numStars; ++i)
+        for(var i = 0; i < this.numStars; ++i)
         {
-            var pos = permRand2D(i + time);
+            var pos = this.permRand2D(i + time);
             
             var base = i * 4;
-            arrayView[base] = pos[0] * xscale; // x
-            arrayView[base + 1] = pos[1] * yscale; // y
-            arrayView[base + 2] = (-i + (time % 1)) * zscale; // z
-            arrayView[base + 3] = 1;
+            this.arrayView[base] = pos[0] * xscale; // x
+            this.arrayView[base + 1] = pos[1] * yscale; // y
+            this.arrayView[base + 2] = (-i + (time % 1)) * zscale; // z
+            this.arrayView[base + 3] = 1;
         }
         
-        gl.bindBuffer(gl.ARRAY_BUFFER, arrayBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, arrayView, gl.DYNAMIC_DRAW);
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.arrayBuffer);
+        this.gl.bufferData(this.gl.ARRAY_BUFFER, this.arrayView, this.gl.DYNAMIC_DRAW);
     }
-
-
-    /////////////////////////////
-    // public methods
-    /////////////////////////////
-
-    this.render = function()
-    {
-        try
-        {
-            // CreateCanvas should already have created gl. If it
-            // doesn't exist webgl isn't supported.
-            if(!gl) return;
-
-            initResources();
-
-            // update stuff
-            var now = new Date().getTime();
-            var delta = now - lastTime;
-            lastTime = now;
-
-            gl.viewport(0, 0, canvas.width, canvas.height);
-            var aspect;
-            if(canvas.height == 0)
-                aspect = 1;
-            else
-                aspect = canvas.width / canvas.height;
-
-            gl.depthRange(0, 1);
-            gl.clearColor(0.0, 0.0, 0.0, 1.0);
-            gl.clear(gl.COLOR_BUFFER_BIT);
-
-            gl.useProgram(shader);
-            gl.enable(gl.BLEND);
-            gl.blendFunc(gl.SRC_COLOR, gl.ONE);
-
-            gl.uniformMatrix4fv(projectionMatrixUniform, false, new Float32Array([1,0,0,0, 0,aspect,0,0, 0,0,0,-1, 0,0,2,0]));
-            gl.uniform1f(spriteScaleUniform, canvas.width * particleRadius);
-            
-            updateStarView(now * particleSpeed);
-
-            gl.bindBuffer(gl.ARRAY_BUFFER, arrayBuffer);
-            gl.vertexAttribPointer(vertexAttrib, 4, gl.FLOAT, false, 0, 0);
-            gl.drawArrays(gl.POINTS, 0, numStars);
-        }
-        catch(ex)
-        {
-            console.error(ex);
-
-            // die. we will not try again
-            return;
-            //throw ex;
-        }
-
-        requestAnimationFrame(function(){self.render();});
-    };
-
 
     ///////////////////////
     // init code
     ///////////////////////
 
-    createCanvas();
+    this.createCanvas();
 
     // TODO should append event instead of overwrite?
-    if(canvas) window.onresize = resizeCanvas;
+    if(this.canvas) window.onresize = this.resizeCanvas;
 }
+
+Starfield.prototype.render = function()
+{
+    var self = this;
+    try
+    {
+        // CreateCanvas should already have created gl. If it
+        // doesn't exist webgl isn't supported.
+        if(!this.gl) return;
+
+        this.initResources();
+
+        // update stuff
+        var now = new Date().getTime();
+        var delta = now - this.lastTime;
+        this.lastTime = now;
+
+        this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+        var aspect;
+        if(this.canvas.height == 0)
+            aspect = 1;
+        else
+            aspect = this.canvas.width / this.canvas.height;
+
+        this.gl.depthRange(0, 1);
+        this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
+        this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+
+        this.gl.useProgram(this.shader);
+        this.gl.enable(this.gl.BLEND);
+        this.gl.blendFunc(this.gl.SRC_COLOR, this.gl.ONE);
+
+        this.gl.uniformMatrix4fv(this.projectionMatrixUniform, false, new Float32Array([1,0,0,0, 0,aspect,0,0, 0,0,0,-1, 0,0,2,0]));
+        this.gl.uniform1f(this.spriteScaleUniform, this.canvas.width * this.particleRadius);
+        
+        this.updateStarView(now * this.particleSpeed);
+
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.arrayBuffer);
+        this.gl.vertexAttribPointer(this.vertexAttrib, 4, this.gl.FLOAT, false, 0, 0);
+        this.gl.drawArrays(this.gl.POINTS, 0, this.numStars);
+    }
+    catch(ex)
+    {
+        if(STARFIELD_DEBUG)
+            throw ex;
+        else
+            // die. we will not try again
+            return;
+    }
+
+    requestAnimationFrame(function(){self.render();});
+};
 
 // export to be able to use closure compiler advanced mode
 window['Starfield'] = Starfield;
