@@ -155,15 +155,13 @@ function Starfield(container, numStars)
 
         var fragmentSrc = '\
 precision mediump float;\n\
-varying float alpha;\n\
 varying float pointSize;\n\
 void main(void)\n\
 {\n\
 vec2 centerCoord = gl_PointCoord - vec2(0.5);\n\
 float radius2 = dot(centerCoord, centerCoord) * 4.0;\n\
-float falloff = min(1.0, (1.0 - pow(radius2, 0.125)) * 2.0);\n\
-float gray = falloff;\n\
-gl_FragColor = mix(vec4(0.5 * (1.0 - smoothstep(0.0, 1.0, radius2))), vec4(gray), clamp(pointSize - 4.0, 0.0, 1.0)) * alpha;\n\
+float falloff = clamp((1.0 - pow(radius2, 0.125)) * 2.0, 0.0, 1.0);\n\
+gl_FragColor = vec4(smoothstep(0.0, 1.0, mix(mix(0.5, 0.6 * step(-1.0, -radius2), clamp(pointSize - 1.0, 0.0, 1.0)), falloff, clamp(pointSize - 4.0, 0.0, 1.0))));\n\
 }\n\
 ';
 
@@ -174,14 +172,11 @@ uniform mat4 projection_matrix;\n\
 attribute vec4 vertexAttrib;\n\
 varying float pointSize;\n\
 \n\
-varying float alpha;\n\
-\n\
 void main(void)\n\
 {\n\
 gl_Position = projection_matrix * vertexAttrib;\n\
-gl_PointSize = 1.0 / max(abs(gl_Position[3]), 0.001) * sprite_scale;\n\
-pointSize = gl_PointSize;\n\
-alpha = clamp(gl_PointSize * 0.9, 0.0, 1.0);\n\
+pointSize = 1.0 / max(abs(gl_Position[3]), 0.001) * sprite_scale;\n\
+gl_PointSize = pointSize;\n\
 }\
 ';
         console.info("vertex shader:\n" + vertexSrc);
