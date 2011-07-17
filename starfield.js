@@ -1,4 +1,7 @@
-// starfield background
+/**
+ * @preserve Copyright 2011 Joel Nises
+ * Webgl starfield
+ */
 
 /** @const */
 var STARFIELD_DEBUG = false;

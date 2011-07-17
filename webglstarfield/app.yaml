@@ -1,0 +1,17 @@
+application: webglstarfield
+version: 1
+runtime: python
+api_version: 1
+
+handlers:
+- url: /
+  script: main.py
+
+- url: /starfield_min\.js
+  static_files: starfield_min.js
+  upload: starfield_min.js
+
+- url: /bg\.png
+  static_files: bg.png
+  upload: bg.png
+
