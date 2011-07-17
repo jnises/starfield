@@ -161,7 +161,7 @@ void main(void)\n\
 vec2 centerCoord = gl_PointCoord - vec2(0.5);\n\
 float radius2 = dot(centerCoord, centerCoord) * 4.0;\n\
 float falloff = clamp((1.0 - pow(radius2, 0.125)) * 2.0, 0.0, 1.0);\n\
-gl_FragColor = vec4(smoothstep(0.0, 1.0, mix(mix(0.5, 0.6 * step(-1.0, -radius2), clamp(pointSize - 1.0, 0.0, 1.0)), falloff, clamp(pointSize - 4.0, 0.0, 1.0))));\n\
+gl_FragColor = vec4(smoothstep(0.0, 1.0, mix(0.0, mix(mix(0.5, 0.6 * step(-1.0, -radius2), clamp(pointSize - 1.0, 0.0, 1.0)), falloff, clamp(pointSize - 4.0, 0.0, 1.0)), clamp(pointSize, 0.0, 1.0))));\n\
 }\n\
 ';
 
