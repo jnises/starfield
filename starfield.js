@@ -298,4 +298,4 @@ gl_PointSize = pointSize;\n\
 
 // export to be able to use closure compiler advanced mode
 window['Starfield'] = Starfield;
-window['Starfield.render'] = Starfield.prototype.render;
+Starfield.prototype['render'] = Starfield.prototype.render;
