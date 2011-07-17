@@ -1,10 +1,9 @@
 // starfield background
 
-/**
- * @const
- */
-var STARFIELD_DEBUG = true;
+/** @const */
+var STARFIELD_DEBUG = false;
 
+// TODO need some export stuff here to work with closure compiler advanced mode
 if(STARFIELD_DEBUG)
 {
     if (!window.console) console = {};
@@ -46,15 +45,18 @@ function Starfield(container, numStars)
 
     var self = this;
     var lastTime = new Date().getTime();
-    numStars = numStars !== undefined ? numStars : 4096;
+    numStars = numStars !== undefined ? numStars : 30000;//8192;
 
+    /** @const */
     var xscale = 2048;
+    /** @const */
     var yscale = 2048;
-    var zscale = 0.5;
+    /** @const */
+    var zscale = 4096 / numStars;
 
-    var particleRadius = 0.5;
+    var particleRadius = 2.0;
     var particleVariance = 0.5;
-    var particleSpeed = 0.01;
+    var particleSpeed = 1.0;
 
     var arrayBuffer = null;
     var arrayView = null;
@@ -67,10 +69,12 @@ function Starfield(container, numStars)
     var vertexAttrib = null;
     var spriteScaleUniform = null;
 
+    /** @const */
+    var permTableSize = numStars;
     var permTable = function()
     {
         var numbers = [];
-        for(var i = 0; i < 256; ++i)
+        for(var i = 0; i < permTableSize; ++i)
         {
             numbers.push(i);
         }
@@ -96,16 +100,8 @@ function Starfield(container, numStars)
     {
         var intval = Math.floor(value);
 
-        var byte0 = 0;
-        var byte1 = 0;
-        for(var i = 7; i >= 0; --i)
-        {
-            byte0 += ((intval >> (i * 2 + 1)) & 1) * Math.pow(2, i);
-            byte1 += ((intval >> (i * 2)) & 1) * Math.pow(2, i);
-        }
-
-        var x = (permTable[byte0] + (permTable[byte1] >> 1)) / 383 - 0.5;
-        var y = (permTable[(byte0 + 123) % 256] + (permTable[(byte1 + 123) % 256] >> 1)) / 383 - 0.5;
+        var x = 2.0 * (permTable[Math.floor(value % permTable.length)] / permTable.length - 0.5);
+        var y = 2.0 * (permTable[Math.floor((value + 41241) % permTable.length)] / permTable.length - 0.5);
         return [x, y];
     }
 
@@ -161,7 +157,7 @@ void main(void)\n\
 vec2 centerCoord = gl_PointCoord - vec2(0.5);\n\
 float radius2 = dot(centerCoord, centerCoord) * 4.0;\n\
 float falloff = clamp((1.0 - pow(radius2, 0.125)) * 2.0, 0.0, 1.0);\n\
-gl_FragColor = vec4(smoothstep(0.0, 1.0, mix(0.0, mix(mix(0.5, 0.5 * step(-1.0, -radius2), clamp(pointSize - 1.0, 0.0, 1.0)), falloff, clamp(pointSize - 4.0, 0.0, 1.0)), clamp(pointSize * 2.0, 0.0, 1.0))));\n\
+gl_FragColor = vec4(smoothstep(0.0, 1.0, mix(0.0, mix(mix(0.4, 0.5 * step(-1.0, -radius2), clamp(pointSize - 1.0, 0.0, 1.0)), falloff, clamp(pointSize - 4.0, 0.0, 1.0)), clamp(pointSize * 2.0, 0.0, 1.0))));\n\
 }\n\
 ';
 
@@ -269,7 +265,7 @@ gl_PointSize = pointSize;\n\
             gl.blendFunc(gl.SRC_COLOR, gl.ONE);
 
             gl.uniformMatrix4fv(projectionMatrixUniform, false, new Float32Array([1,0,0,0, 0,aspect,0,0, 0,0,0,-1, 0,0,2,0]));
-            gl.uniform1f(spriteScaleUniform, canvas.width);
+            gl.uniform1f(spriteScaleUniform, canvas.width * particleRadius);
             
             updateStarView(now * particleSpeed);
 
@@ -299,3 +295,7 @@ gl_PointSize = pointSize;\n\
     // TODO should append event instead of overwrite?
     if(canvas) window.onresize = resizeCanvas;
 }
+
+// export to be able to use closure compiler advanced mode
+window['Starfield'] = Starfield;
+window['Starfield.render'] = Starfield.prototype.render;
