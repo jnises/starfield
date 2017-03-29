@@ -1,2 +1,4 @@
 starfield_min.js
 /webglstarfield/bg.png
+.DS_Store
+*.pyc
