@@ -1,7 +1,6 @@
-from google.appengine.ext import webapp
-from google.appengine.ext.webapp.util import run_wsgi_app
+import webapp2
 
-class Main(webapp.RequestHandler):
+class Main(webapp2.RequestHandler):
     def get(self):
         self.response.headers['Content-Type'] = 'text/html'
         self.response.out.write("""
@@ -54,10 +53,4 @@ If you are from the future even Internet Explorer might work.
 </html>
 """)
 
-application = webapp.WSGIApplication([('/', Main)], debug = False)
-
-def main():
-    run_wsgi_app(application)
-
-if __name__ == "__main__":
-    main()
+application = webapp2.WSGIApplication([('/', Main)], debug = False)
